@@ -1,0 +1,42 @@
+version: "3.8"
+
+services:
+  radioapis_db:
+    container_name: radioapis_db
+    image: postgres
+    env_file:
+      - .env
+    restart: always
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+
+  backend:
+    container_name: analytics_api
+    build:
+      context: .
+    command: gunicorn analytics_api.wsgi --bind 0.0.0.0:8001 --timeout 120 --workers 4 --reload
+    ports:
+      - "8001:8001"
+    restart: always
+    volumes:
+      - .:/analytics
+    depends_on:
+      - radioapis_db
+    links:
+      - radioapis_db
+
+  voicetracking_api:
+    container_name: voicetracking_api
+    env_file:
+      - .env
+    restart: always
+    build: ./voicetracking_api
+    command: uvicorn api:app --host 0.0.0.0 --port 7001
+    ports:
+      - "7001:7001"
+
+volumes:
+  pgdata:
+    driver: local
